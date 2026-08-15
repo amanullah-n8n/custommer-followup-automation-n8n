@@ -1,0 +1,309 @@
+{
+  "name": "Customer Follow-up Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6cc4b9bf-096e-485d-93d7-64358144d840",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ",
+          "mode": "list",
+          "cachedResultName": "Customer_Follow_Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "543bb0e4-e79f-4c77-ab31-fc2e86330690",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zgPxrP3Xm9gNoTqn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst result = [];\n\nfor (const item of items) {\n  const lastContact = new Date(item.json['last contact date']);\n  const now = new Date();\n  const diffTime = now - lastContact;\n  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));\n  \n  const status = (item.json['status'] || '').trim().toLowerCase();\n  \n  const needsFollowup = diffDays >= 3 && status === 'pending';\n  \n  result.push({\n    json: {\n      ...item.json,\n      diffDays: diffDays,\n      needsFollowup: needsFollowup\n    }\n  });\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4d4a7841-36fa-4713-b84c-a540bd7ed069",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fabad494-ff9d-4533-9151-96193ea10a2d",
+              "leftValue": "={{ $json.needsFollowup }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "df2bfca2-43a8-470e-a5b2-40b290ea9005",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Follow up on your inquiry",
+        "message": "=Hi {{ $json.name }},  Just checking in — did you get a chance to look at our offer? Let us know if you have any questions, we'd love to help.  Best regards",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "9d6005ae-6b4f-4b49-8f8d-c92ebb6b3942",
+      "name": "Send a message",
+      "webhookId": "8aff2976-88ea-4eb1-a8a0-47f898fcd6a6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "nZClC8Xql87xr497",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ",
+          "mode": "list",
+          "cachedResultName": "Customer_Follow_Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aTa1Ec26UA3n0QFBVD_Rzaz_86qpfujy4loprEtDYIQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Code in JavaScript').item.json.row_number }}",
+            "name": "={{ $('Code in JavaScript').item.json.name }}",
+            "email": "={{ $('Code in JavaScript').item.json.email }}",
+            "last contact date": "={{ $('Code in JavaScript').item.json['last contact date'] }}",
+            "status": "={{ $('Code in JavaScript').item.json.status }}",
+            "follow up sent": "yes"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last contact date",
+              "displayName": "last contact date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow up sent",
+              "displayName": "follow up sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "18c1f68b-5d1b-45d0-a130-737ae8f620f6",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zgPxrP3Xm9gNoTqn",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fb9037fa-de58-4392-b180-d4fbae758ac1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b16438f171cdb5b80695fc0ae489e8a8e73a063371b31ec438e799872b89023d"
+  },
+  "nodeGroups": [],
+  "id": "YOkMfCRx6lTKqCzM",
+  "tags": []
+}
